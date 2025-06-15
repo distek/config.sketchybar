@@ -4,7 +4,7 @@ local colors = require("colors")
 sbar.bar({
 	height = 30,
 	color = colors.bar.bg,
-	y_offset = 5,
+	y_offset = 3,
 	border_color = colors.bar.border,
 	shadow = true,
 	sticky = true,
@@ -12,4 +12,5 @@ sbar.bar({
 	padding_left = 10,
 	blur_radius = 20,
 	topmost = "off",
+	position = "bottom",
 })

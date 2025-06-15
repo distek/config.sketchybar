@@ -21,7 +21,7 @@ local cal = sbar.add("item", {
 })
 
 local function update()
-	local date = os.date("%m/%d/%y")
+	local date = os.date("%Y/%m/%d")
 	local time = os.date("%H:%M")
 	cal:set({ icon = date, label = time })
 end
