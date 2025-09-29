@@ -40,6 +40,19 @@ local function getWorkspaces()
 	return split(result, "\n")
 end
 
+local function getCurrentWorkspace()
+	local h = io.popen([[aerospace list-workspaces --focused]])
+
+	if h == nil then
+		return
+	end
+
+	local result = h:read("*a")
+	h:close()
+
+	return tonumber(result)
+end
+
 local function getSpaceWinCount(sid)
 	local h = io.popen([[aerospace list-windows --workspace ]] .. sid .. [[ --count]])
 
@@ -85,30 +98,72 @@ local function getWorkspaceDisplay(sid)
 	return 1
 end
 
+local function getIfOnlyWorkspaceOnDisplay(sid)
+	local h = io.popen([[aerospace list-workspaces --all --format  "%{workspace},%{monitor-id}"| grep -v scratchpad]])
+
+	if h == nil then
+		return false
+	end
+
+	local result = h:read("*a")
+	h:close()
+
+	local count = 0
+	local monitor = 0
+	local resSplit = split(result, "\n")
+	for _, v in ipairs(resSplit) do
+		if v ~= "" then
+			local s = split(v, ",")
+			if tonumber(s[1]) == sid then
+				monitor = tonumber(s[2])
+				break
+			end
+		end
+	end
+
+	for _, v in ipairs(resSplit) do
+		if v ~= "" then
+			local s = split(v, ",")
+			if tonumber(s[2]) == monitor then
+				count = count + 1
+			end
+		end
+	end
+
+	return count == 1
+end
+
+local function isValid(sid, focused)
+	local c = getSpaceWinCount(sid)
+	return c > 0 or focused == sid or getIfOnlyWorkspaceOnDisplay(sid)
+end
+
 local function space_selection(env)
-	local c = getSpaceWinCount(env.SID)
-	local color = env.FOCUSED_WORKSPACE == env.SID and colors.green or c > 0 and colors.white or colors.bg2
+	local sid = tonumber(env.SID)
+	local focused = tonumber(env.FOCUSED_WORKSPACE)
+	local c = getSpaceWinCount(sid)
+	local color = focused == sid and colors.green or c > 0 and colors.white or colors.bg2
 
 	local d = 1
-	if workspaceExists(env.SID) then
-		d = getWorkspaceDisplay(env.SID)
+	if workspaceExists(sid) then
+		d = getWorkspaceDisplay(sid)
 	end
 
 	local space = {
-		associated_space = env.SID,
+		associated_space = sid,
 		display = d,
 		icon = {
-			string = env.SID,
-			padding_left = 10,
-			padding_right = 10,
+			string = sid,
+			padding_left = isValid(sid, focused) and 10,
+			padding_right = isValid(sid, focused) and 10,
 			color = color,
 			highlight_color = colors.green,
-			drawing = true,
+			drawing = isValid(sid, focused),
 		},
-		padding_left = 2,
-		padding_right = 2,
+		padding_left = isValid(sid, focused) and 2,
+		padding_right = isValid(sid, focused) and 2,
 		label = {
-			string = env.SID,
+			string = sid,
 			padding_right = 20,
 			highlight_color = colors.white,
 			font = {
@@ -124,12 +179,13 @@ local function space_selection(env)
 	sbar.set(env.NAME, space)
 end
 
+local focused = getCurrentWorkspace()
+
 local spaces = {}
 for i = 1, 10 do
 	local c = getSpaceWinCount(i)
 
 	local d = 1
-
 	if workspaceExists(i) then
 		d = getWorkspaceDisplay(i)
 	end
@@ -139,14 +195,14 @@ for i = 1, 10 do
 		display = d,
 		icon = {
 			string = i,
-			padding_left = 10,
-			padding_right = 10,
-			color = c > 1 and colors.white or colors.bg2,
+			padding_left = isValid(i, focused) and 10,
+			padding_right = isValid(i, focused) and 10,
+			color = focused == i and colors.green or c > 0 and colors.white or colors.bg2,
 			highlight_color = colors.green,
-			drawing = true,
+			drawing = c > 0,
 		},
-		padding_left = 2,
-		padding_right = 2,
+		padding_left = isValid(i, focused) and 2,
+		padding_right = isValid(i, focused) and 2,
 		label = {
 			string = i,
 			padding_right = 20,
